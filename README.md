@@ -1,5 +1,8 @@
 # glTF IBL Sampler
 
+## Fork-Specific Changes
+This fork introduces modifications. See [FORKINSTRUCTIONS.md](FORKINSTRUCTIONS.md) for details.
+
 ## Introduction
 
 This project pre-filters an environment High Dynamic Range (HDR) panorama image and stores diffuse and specular parts in cube maps respectively. Considering different material characteristics, the specular part consists of several mip-map levels corresponding to different roughness values of the modeled material. The final basis compression into a [KTX2](https://github.com/KhronosGroup/KTX-Software/tree/ktx2) file ensures small file sizes while maintaining reasonable image quality.
