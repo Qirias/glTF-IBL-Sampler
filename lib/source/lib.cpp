@@ -4,6 +4,7 @@
 #include "STBImage.h"
 #include "FileHelper.h"
 #include "ktxImage.h"
+#include "SH9.h"
 #include <algorithm>
 #include <stdio.h>
 #include <math.h>
@@ -43,6 +44,7 @@ Result uploadImage(vkHelper& _vulkan, const char* _inputPath, VkImage& _outImage
 {
 	_outImage = VK_NULL_HANDLE;
 	STBImage panorama;
+	SH9::init(_inputPath);
 
 	if (panorama.loadHdr(_inputPath) != Result::Success)
 	{
@@ -864,6 +866,20 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		DescriptorSetInfo setLayout0;
 		uint32_t binding = 1u;
 		setLayout0.addCombinedImageSampler(cubeMipMapSampler, inputCubeMapCompleteView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, binding, VK_SHADER_STAGE_FRAGMENT_BIT); // change sampler ?
+
+		VkBuffer uniformBuffer = nullptr;
+		VkDeviceSize bufferSize = sizeof(float) * 9 * 4; // 9 coefficients
+		vulkan.createBufferAndAllocate(
+			uniformBuffer,
+			static_cast<uint32_t>(bufferSize),
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			VK_SHARING_MODE_EXCLUSIVE, 0);
+
+		vulkan.writeBufferData(uniformBuffer, SH9::coeffs, bufferSize);
+
+		binding = 2u;
+		setLayout0.addUniform(uniformBuffer, 0, bufferSize, binding, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 		VkDescriptorSetLayout filterSetLayout = VK_NULL_HANDLE;
 		if (setLayout0.create(vulkan, filterSetLayout, filterDescriptorSet) != VK_SUCCESS)

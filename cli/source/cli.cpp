@@ -13,8 +13,8 @@ int main(int argc, char* argv[])
 	unsigned int sampleCount = 1024u;
 	unsigned int mipLevelCount = 0u;
 	unsigned int cubeMapResolution = 0u;
-	OutputFormat targetFormat = OutputFormat::R16G16B16A16_SFLOAT;
-	Distribution distribution = Distribution::GGX;
+	OutputFormat targetFormat = OutputFormat::B10G11R11_UFLOAT_PACK32;
+	Distribution distribution = Distribution::GGXCubeMap;
 	float lodBias = 0.0f;
 	bool enableDebugOutput = false;
 
@@ -30,11 +30,11 @@ int main(int argc, char* argv[])
 		printf("-inputPath: path to panorama image (default) or cube map (if inputIsCubeMap flag ist set) \n");
 		printf("-outCubeMap: output path for filtered cube map\n");
 		printf("-outLUT output path for BRDF LUT\n");
-		printf("-distribution NDF to sample (Lambertian, GGX, Charlie)\n");
+		printf("-distribution NDF to sample (Lambertian, GGX, Charlie, GGXCubeMap)\n");
 		printf("-sampleCount: number of samples used for filtering (default = 1024)\n");
 		printf("-mipLevelCount: number of mip levels of specular cube map. If omitted, an optimal mipmap level is chosen, based on the input panorama's resolution.\n");
 		printf("-cubeMapResolution: resolution of output cube map.  If omitted, an optimal resolution is chosen, based on the input panorama's resolution.\n");
-		printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT)  \n");
+		printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT, B10G11R11_UFLOAT_PACK32)  \n");
 		printf("-lodBias: level of detail bias applied to filtering (default = 0) \n");
 
 
@@ -84,6 +84,10 @@ int main(int argc, char* argv[])
 			{
 				targetFormat = OutputFormat::R32G32B32A32_SFLOAT;
 			}
+			else if (strcmp(targetFormatString, "B10G11R11_UFLOAT_PACK32") == 0)
+			{
+				targetFormat = OutputFormat::B10G11R11_UFLOAT_PACK32;
+			}
 		}
 		else if (strcmp(argv[i], "-distribution") == 0)
 		{
@@ -100,6 +104,10 @@ int main(int argc, char* argv[])
 			else if (strcmp(distributionString, "Charlie") == 0)
 			{
 				distribution = Distribution::Charlie;
+			}
+			else if (strcmp(distributionString, "GGXCubeMap") == 0)
+			{
+				distribution = Distribution::GGXCubeMap;
 			}
 		}
 		else if (strcmp(argv[i], "-lodBias") == 0)

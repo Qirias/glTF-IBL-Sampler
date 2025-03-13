@@ -41,6 +41,7 @@ IBLLib::Result IBLLib::STBImage::loadHdr(const char* _path)
 	}
 
 	// stbi_loadf
+	stbi_set_flip_vertically_on_load(false);
 	m_hdrData = stbi_loadf(_path, &m_width, &m_height, &m_channels, STBI_rgb_alpha);
 
 	if (m_hdrData == nullptr)

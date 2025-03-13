@@ -7,11 +7,16 @@ R""(
 
 layout(set = 0, binding = 0) uniform sampler2D uPanorama;
 layout(set = 0, binding = 1) uniform samplerCube uCubeMap;
+layout(set = 0, binding = 2) uniform uSH9 {
+    vec4 coefficients[9];    
+};
+
 
 // enum
 const uint cLambertian = 0;
 const uint cGGX = 1;
 const uint cCharlie = 2;
+const uint cGGXCubeMap = 3;
 
 layout(push_constant) uniform FilterParameters {
   float roughness;
@@ -83,6 +88,46 @@ vec2 dirToUV(vec3 dir)
 float saturate(float v)
 {
     return clamp(v, 0.0f, 1.0f);
+}
+
+vec3 sample_sh(const vec3 direction) {
+    float x = direction.x;
+    float y = direction.y;
+    float z = direction.z;
+
+    // Evaluate spherical harmonics basis functions
+    // https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
+    float Y00 = 0.282095; // 1/(2*sqrt(pi))
+
+    float Y1_1 = 0.488603 * y; // sqrt(3/(4pi)) * y
+    float Y10  = 0.488603 * z; // sqrt(3/(4pi)) * z
+    float Y11  = 0.488603 * x; // sqrt(3/(4pi)) * x
+
+    float Y2_2 = 1.092548 * x * y; // sqrt(15/(4pi)) * x * y
+    float Y2_1 = 1.092548 * y * z; // sqrt(15/(4pi)) * y * z
+    float Y21  = 1.092548 * x * z; // sqrt(15/(4pi)) * x * z
+    float Y20  = 0.315392 * (3.0 * z * z - 1.0); // sqrt(5/(16pi)) * (3z^2 - 1)
+    float Y22  = 0.546274 * (x * x - y * y); // sqrt(15/(16pi)) * (x^2 - y^2)
+
+    // Combine coefficients with basis functions
+    vec3 color = vec3(0.0, 0.0, 0.0);
+    for (int i = 0; i < 3; i++) {
+        float sum = coefficients[0][i] * Y00;   // L_{00}
+
+        sum += coefficients[1][i] * Y1_1;       // L_{1-1}
+        sum += coefficients[2][i] * Y10;        // L_{10}
+        sum += coefficients[3][i] * Y11;        // L_{11}
+        
+        sum += coefficients[4][i] * Y2_2;       // L_{2-2}
+        sum += coefficients[5][i] * Y2_1;       // L_{2-1}
+        sum += coefficients[6][i] * Y20;        // L_{20}
+        sum += coefficients[7][i] * Y21;        // L_{21}
+        sum += coefficients[8][i] * Y22;        // L_{22}
+
+        color[i] = sum;
+    }
+
+    return color;
 }
 
 // Hammersley Points on the Hemisphere
@@ -248,7 +293,7 @@ vec4 getImportanceSample(int sampleIndex, vec3 N, float roughness)
     {
         importanceSample = Lambertian(xi, roughness);
     }
-    else if(pFilterParameters.distribution == cGGX)
+    else if(pFilterParameters.distribution == cGGX || pFilterParameters.distribution == cGGXCubeMap)
     {
         // Trowbridge-Reitz / GGX microfacet model (Walter et al)
         // https://www.cs.cornell.edu/~srm/publications/EGSR07-btdf.html
@@ -277,20 +322,7 @@ vec4 getImportanceSample(int sampleIndex, vec3 N, float roughness)
 // https://cgg.mff.cuni.cz/~jaroslav/papers/2007-sketch-fis/Final_sap_0073.pdf
 float computeLod(float pdf)
 {
-    // // Solid angle of current sample -- bigger for less likely samples
-    // float omegaS = 1.0 / (float(FilterParameters.sampleCoun) * pdf);
-    // // Solid angle of texel
-    // // note: the factor of 4.0 * UX3D_MATH_PI 
-    // float omegaP = 4.0 * UX3D_MATH_PI / (6.0 * float(pFilterParameters.width) * float(pFilterParameters.width));
-    // // Mip level is determined by the ratio of our sample's solid angle to a texel's solid angle 
-    // // note that 0.5 * log2 is equivalent to log4
-    // float lod = 0.5 * log2(omegaS / omegaP);
-
-    // babylon introduces a factor of K (=4) to the solid angle ratio
-    // this helps to avoid undersampling the environment map
-    // this does not appear in the original formulation by Jaroslav Krivanek and Mark Colbert
-    // log4(4) == 1
-    // lod += 1.0;
+    // removed comments, look at original repo
 
     // We achieved good results by using the original formulation from Krivanek & Colbert adapted to cubemaps
 
@@ -323,16 +355,14 @@ vec3 filterColor(vec3 N)
         if(pFilterParameters.distribution == cLambertian)
         {
             // sample lambertian at a lower resolution to avoid fireflies
-            vec3 lambertian = textureLod(uCubeMap, H, lod).rgb;
-
-            //// the below operations cancel each other out
-            // lambertian *= NdotH; // lamberts law
-            // lambertian /= pdf; // invert bias from importance sampling
-            // lambertian /= UX3D_MATH_PI; // convert irradiance to radiance https://seblagarde.wordpress.com/2012/01/08/pi-or-not-to-pi-in-game-lighting-equation/
+            // vec3 lambertian = textureLod(uCubeMap, H, lod).rgb;
+            // Use spherical harmonics for diffuse
+            vec3 lambertian = sample_sh(H);
+            
 
             color += lambertian;
         }
-        else if(pFilterParameters.distribution == cGGX || pFilterParameters.distribution == cCharlie)
+        else if(pFilterParameters.distribution == cGGX || pFilterParameters.distribution == cGGXCubeMap || pFilterParameters.distribution == cCharlie)
         {
             // Note: reflect takes incident vector.
             vec3 V = N;
@@ -346,7 +376,9 @@ vec3 filterColor(vec3 N)
                     // without this the roughness=0 lod is too high
                     lod = pFilterParameters.lodBias;
                 }
+
                 vec3 sampleColor = textureLod(uCubeMap, L, lod).rgb;
+
                 color += sampleColor * NdotL;
                 weight += NdotL;
             }
@@ -390,11 +422,7 @@ vec3 LUT(float NdotV, float roughness)
     // The macro surface normal just points up.
     vec3 N = vec3(0.0, 0.0, 1.0);
 
-    // To make the LUT independant from the material's F0, which is part of the Fresnel term
-    // when substituted by Schlick's approximation, we factor it out of the integral,
-    // yielding to the form: F0 * I1 + I2
-    // I1 and I2 are slighlty different in the Fresnel term, but both only depend on
-    // NoL and roughness, so they are both numerically integrated and written into two channels.
+    // removed comments, look at original repo
     float A = 0.0;
     float B = 0.0;
     float C = 0.0;
@@ -412,9 +440,8 @@ vec3 LUT(float NdotV, float roughness)
         float VdotH = saturate(dot(V, H));
         if (NdotL > 0.0)
         {
-            if (pFilterParameters.distribution == cGGX)
+            if (pFilterParameters.distribution == cGGX || pFilterParameters.distribution == cGGXCubeMap)
             {
-                // LUT for GGX distribution.
 
                 // Taken from: https://bruop.github.io/ibl
                 // Shadertoy: https://www.shadertoy.com/view/3lXXDB
@@ -439,9 +466,7 @@ vec3 LUT(float NdotV, float roughness)
         }
     }
 
-    // The PDF is simply pdf(v, h) -> NDF * <nh>.
-    // To parametrize the PDF over l, use the Jacobian transform, yielding to: pdf(v, l) -> NDF * <nh> / 4<vh>
-    // Since the BRDF divide through the PDF to be normalized, the 4 can be pulled out of the integral.
+    // removed comments, look at the original repo
     return vec3(4.0 * A, 4.0 * B, 4.0 * 2.0 * UX3D_MATH_PI * C) / float(pFilterParameters.sampleCount);
 }
 
@@ -467,6 +492,10 @@ void filterCubeMap()
 	vec2 newUV = inUV * float(1 << (pFilterParameters.currentMipLevel));
 	 
 	newUV = newUV*2.0-1.0;
+
+    float angle = radians(90.0f);
+    float cosTheta = cos(angle);
+    float sinTheta = sin(angle);
 	
 	for(int face = 0; face < 6; ++face)
 	{
@@ -475,16 +504,13 @@ void filterCubeMap()
 		vec3 direction = normalize(scan);	
 		direction.y = -direction.y;
 
+        vec3 rotateDir = vec3(direction.x*cosTheta + direction.z*sinTheta,
+                              direction.y,
+                              -direction.x*sinTheta + direction.z*cosTheta);
+
 		writeFace(face, filterColor(direction));
-		
-		//Debug output:
-		//writeFace(face,  texture(uCubeMap, direction).rgb);
-		//writeFace(face,   direction);
 	}
 
-	// Write LUT:
-	// x-coordinate: NdotV
-	// y-coordinate: roughness
 	if (pFilterParameters.currentMipLevel == 0)
 	{
 		
