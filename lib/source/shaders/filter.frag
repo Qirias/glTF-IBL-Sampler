@@ -508,7 +508,7 @@ void filterCubeMap()
                               direction.y,
                               -direction.x*sinTheta + direction.z*cosTheta);
 
-		writeFace(face, filterColor(direction));
+		writeFace(face, filterColor(rotateDir));
 	}
 
 	if (pFilterParameters.currentMipLevel == 0)

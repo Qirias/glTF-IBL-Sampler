@@ -13,7 +13,7 @@ const uint8_t KTX2_IDENTIFIER[12] = {
 };
 
 const uint8_t KTX1_IDENTIFIER[12] = {
-    0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
+    0xAB, 0x4B, 0x54, 0x58, 0x20, 0x31, 0x31, 0xBB, 0x0D, 0x0A, 0x1A, 0x0A
 };
 
 // GL constants
@@ -39,11 +39,12 @@ struct KTX2Header {
 
     // Index
     uint32_t dfdByteOffset;
-    uint32_t dfdButeLength;
+    uint32_t dfdByteLength;
     uint32_t kvdByteOffset;
     uint32_t kvdByteLength;
-    uint32_t sgdByteOffset;
-    uint32_t sgdByteLength;
+
+    uint64_t sgdByteOffset;
+    uint64_t sgdByteLength;
 };
 
 struct KTX1Header {
