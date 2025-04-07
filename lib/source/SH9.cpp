@@ -7,8 +7,13 @@ int SH9::width = 0;
 int SH9::height = 0;
 int SH9::channels = 0;
 float* SH9::data = nullptr;
+std::string SH9::shOutputPath = "sh9.txt";
 
-void SH9::init(const char* filename) {
+void SH9::init(const char* filename, const char* outputPath) {
+	if (outputPath) {
+		shOutputPath = outputPath;
+	}
+
 	stbi_set_flip_vertically_on_load(true);
 
 	data = stbi_loadf(filename, &width, &height, &channels, 0);
@@ -46,7 +51,7 @@ void SH9::updateCoeffs(const vec3& hdrColor, float domega, float x, float y, flo
 }
 
 void SH9::prefilter() {
-	std::ofstream shFile("sh.txt");
+	std::ofstream shFile(shOutputPath);
 	if (!shFile.is_open()) {
 		std::cerr << "Error: Failed to open sh.txt!\n";
 		return;

@@ -17,6 +17,7 @@ int main(int argc, char* argv[])
 	Distribution distribution = Distribution::GGXCubeMap;
 	float lodBias = 0.0f;
 	bool enableDebugOutput = false;
+	const char* pathOutSH = nullptr;
 
 	const char* targetFormatString = "R16G16B16A16_SFLOAT";
 	const char* distributionString = "GGX";
@@ -30,13 +31,13 @@ int main(int argc, char* argv[])
 		printf("-inputPath: path to panorama image (default) or cube map (if inputIsCubeMap flag ist set) \n");
 		printf("-outCubeMap: output path for filtered cube map\n");
 		printf("-outLUT output path for BRDF LUT\n");
+		printf("-outSH: output path for spherical harmonics coefficients (default = sh.txt)\n");
 		printf("-distribution NDF to sample (Lambertian, GGX, Charlie, GGXCubeMap)\n");
 		printf("-sampleCount: number of samples used for filtering (default = 1024)\n");
 		printf("-mipLevelCount: number of mip levels of specular cube map. If omitted, an optimal mipmap level is chosen, based on the input panorama's resolution.\n");
 		printf("-cubeMapResolution: resolution of output cube map.  If omitted, an optimal resolution is chosen, based on the input panorama's resolution.\n");
 		printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT, B10G11R11_UFLOAT_PACK32)  \n");
 		printf("-lodBias: level of detail bias applied to filtering (default = 0) \n");
-
 
 		return 0;
 	}
@@ -55,6 +56,10 @@ int main(int argc, char* argv[])
 		else if (strcmp(argv[i], "-outLUT") == 0)
 		{
 			pathOutLUT = nextArg;
+		}
+		else if (strcmp(argv[i], "-outSH") == 0)
+		{
+			pathOutSH = nextArg;
 		}
 		else if (strcmp(argv[i], "-sampleCount") == 0)
 		{
@@ -148,6 +153,10 @@ int main(int argc, char* argv[])
 	{
 		printf("outLUT set to %s \n", pathOutLUT);	
 	}
+	if (pathOutSH != nullptr)
+	{
+		printf("outSH set to %s \n", pathOutSH);
+	}
 
 	printf("sampleCount set to %d \n", sampleCount);
 	printf("mipLevelCount set to %d \n", mipLevelCount);
@@ -156,7 +165,7 @@ int main(int argc, char* argv[])
 	printf("lodBias set to %f \n", lodBias);
 	printf("debug flag is set to %s\n", enableDebugOutput ? "True" : "False");
 
-	Result res = sample(pathIn, pathOutCubeMap, pathOutLUT, distribution, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, enableDebugOutput);
+	Result res = sample(pathIn, pathOutCubeMap, pathOutLUT, pathOutSH, distribution, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, enableDebugOutput);
 
 	if (res != Result::Success)
 	{

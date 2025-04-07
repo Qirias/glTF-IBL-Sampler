@@ -40,11 +40,11 @@ Result compileShader(vkHelper& _vulkan, const char* _shaderText, const char* _en
 	return Result::Success;
 }
 
-Result uploadImage(vkHelper& _vulkan, const char* _inputPath, VkImage& _outImage)
+Result uploadImage(vkHelper& _vulkan, const char* _inputPath, const char* _shOutputPath, VkImage& _outImage)
 {
 	_outImage = VK_NULL_HANDLE;
 	STBImage panorama;
-	SH9::init(_inputPath);
+	SH9::init(_inputPath, _shOutputPath);
 
 	if (panorama.loadHdr(_inputPath) != Result::Success)
 	{
@@ -682,7 +682,7 @@ Result panoramaToCubemap(vkHelper& _vulkan, const VkCommandBuffer _commandBuffer
 } // !IBLLib
 
 
-IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCubeMap, const char* _outputPathLUT, Distribution _distribution, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _debugOutput)
+IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCubeMap, const char* _outputPathLUT, const char* _outputPathSH, Distribution _distribution, unsigned int _cubemapResolution, unsigned int _mipmapCount, unsigned int _sampleCount, OutputFormat _targetFormat, float _lodBias, bool _debugOutput)
 {
 	const VkFormat cubeMapFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 	const VkFormat LUTFormat = VK_FORMAT_R8G8B8A8_UNORM;
@@ -697,7 +697,7 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	}
 
 	VkImage panoramaImage;
-	if ((res = uploadImage(vulkan, _inputPath, panoramaImage)) != Result::Success)
+	if ((res = uploadImage(vulkan, _inputPath, _outputPathSH, panoramaImage)) != Result::Success)
 	{
 		return res;
 	}
