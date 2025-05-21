@@ -295,9 +295,15 @@ Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 	// Image is copied to buffer
 	// Now map buffer and copy to ram
 	{
-		KtxImage ktxImage(cubeMapSideLength, cubeMapSideLength, cubeMapFormat, mipLevels, true);
+        std::string path = _outputPath;
+        std::unique_ptr<IKtxImage> ktxImage;
 
-		std::vector<uint8_t> imageData;
+        if (path.substr(path.size()-4).compare(".ktx") == 0)
+            ktxImage = std::make_unique<KtxImage1>(cubeMapSideLength, cubeMapSideLength, cubeMapFormat, mipLevels, true);
+        else
+            ktxImage = std::make_unique<KtxImage2>(cubeMapSideLength, cubeMapSideLength, cubeMapFormat, mipLevels, true);
+
+        std::vector<uint8_t> imageData;
 
 		uint32_t currentSideLength = cubeMapSideLength;
 
@@ -315,7 +321,7 @@ Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 					return Result::VulkanError;
 				}
 
-				res = ktxImage.writeFace(imageData, face, level);
+				res = ktxImage->writeFace(imageData, face, level);
 
 				if (res != Result::Success)
 				{
@@ -328,7 +334,7 @@ Result downloadCubemap(vkHelper& _vulkan, const VkImage _srcImage, const char* _
 			currentSideLength = currentSideLength >> 1;
 		}
 
-		res = ktxImage.save(_outputPath);
+		res = ktxImage->save(_outputPath);
 		if (res != Result::Success)
 		{
 			printf("Could not save to path %s \n", _outputPath);
