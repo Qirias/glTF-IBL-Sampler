@@ -89,7 +89,7 @@ setlocal EnableDelayedExpansion
 set /A PARSELINE=1
 
 :: Parse the coefficients
-FOR /F "tokens=1,2,3 delims=," %%i in (sh.txt) do (
+FOR /F "tokens=1,2,3 delims=," %%i in (sh9.txt) do (
     set "ic!PARSELINE!1=%%i"
     set "ic!PARSELINE!2=%%j"
     set "ic!PARSELINE!3=%%k"

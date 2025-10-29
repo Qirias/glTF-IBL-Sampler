@@ -78,7 +78,7 @@ void SH9::prefilter() {
 
 			vec3 color = getPixel(j, i);
 
-			updateCoeffs(color, domega, x, y, z);
+			updateCoeffs(color, domega, x, -y, z);
 		}
 	}
 

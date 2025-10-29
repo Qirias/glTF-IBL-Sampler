@@ -502,12 +502,12 @@ void filterCubeMap()
 		vec3 scan = uvToXYZ(face, newUV);		
 			
 		vec3 direction = normalize(scan);	
-		direction.y = -direction.y;
 
         vec3 rotateDir = vec3(direction.x*cosTheta + direction.z*sinTheta,
                               direction.y,
-                              -direction.x*sinTheta + direction.z*cosTheta);
+                              direction.x*sinTheta + direction.z*cosTheta);
 
+        rotateDir.y = -rotateDir.y;
 		writeFace(face, filterColor(rotateDir));
 	}
 
