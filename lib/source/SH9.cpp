@@ -64,8 +64,8 @@ void SH9::prefilter() {
 			float ww = (2.0f * j / width - 1.0f); // [-1, 1]
 			float hh = (1.0f - 2.0f * i / float(height)); // [1, -1]
 
-			float theta = ww * 3.14159265359;
-			float phi = hh * 3.14159265359 * 0.5; // pi/2
+			float theta = ww * 3.14159265359f;
+			float phi = hh * 3.14159265359f * 0.5f; // pi/2
 
 			// Convert to cartesian coordinates (unit vector)
 			float x = cos(phi) * sin(theta);
@@ -74,11 +74,16 @@ void SH9::prefilter() {
 
 			// Calculate solid angle for this pixel
 			// The cos(phi) term accounts for the changing density of pixels near poles
-			float domega = (2.0f * 3.14159265359 / width) * (3.14159265359 / height) * cos(phi);
+			float domega = (2.0f * 3.14159265359f / width) * (3.14159265359f / height) * cos(phi);
 
 			vec3 color = getPixel(j, i);
 
-			updateCoeffs(color, domega, x, -y, z);
+			vec3 direction = vec3(x, y, z);
+
+			direction[0] = -direction[0];
+			direction[1] = -direction[1];
+
+			updateCoeffs(color, domega, direction[0], direction[1], direction[2]);
 		}
 	}
 
