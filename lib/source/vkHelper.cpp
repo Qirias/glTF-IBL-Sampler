@@ -74,7 +74,7 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appInfo;
 		createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-
+		
 		if (!layers.empty())
 		{
 			createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
@@ -89,7 +89,7 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 
 		if ((res = vkCreateInstance(&createInfo, nullptr, &m_instance)) != VK_SUCCESS)
 		{
-			printf("Failed to create Vulkan instance [%u]\n", res);
+			printf("Failed to create Vulkan instance [%i]\n", res);
 			return res;
 		}
 
@@ -104,14 +104,14 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 		uint32_t deviceCount = 0;
 		if ((res = vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr)) != VK_SUCCESS)
 		{
-			printf("Failed to enumerate physical devices [%u]\n", res);
+			printf("Failed to enumerate physical devices [%i]\n", res);
 			return res;
 		}
 
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		if ((res = vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data())) != VK_SUCCESS)
 		{
-			printf("Failed to enumerate physical devices [%u]\n", res);
+			printf("Failed to enumerate physical devices [%i]\n", res);
 			return res;
 		}
 
@@ -191,7 +191,7 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 
 		if ((res = vkCreateDevice(m_physicalDevice, &deviceCreateInfo, nullptr, &m_logicalDevice)) != VK_SUCCESS)
 		{
-			printf("Failed to create logical device [%u]\n", res);
+			printf("Failed to create logical device [%i]\n", res);
 			return res;
 		}
 
@@ -215,7 +215,7 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 
 		if ((res = vkCreateCommandPool(m_logicalDevice, &cmdPoolCreateInfo, nullptr, &m_commandPool)) != VK_SUCCESS)
 		{
-			printf("Failed to create command pool [%u]\n", res);
+			printf("Failed to create command pool [%i]\n", res);
 			return res;
 		}
 		if (m_debugOutputEnabled)
@@ -255,7 +255,7 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 
 		if ((res = vkCreateDescriptorPool(m_logicalDevice, &descriptorPoolCreateInfo, nullptr, &m_descriptorPool)) != VK_SUCCESS)
 		{
-			printf("Failed to create descriptor pool [%u]\n", res);
+			printf("Failed to create descriptor pool [%i]\n", res);
 			return res;
 		}
 
@@ -284,7 +284,7 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 
 		if ((res = vkCreatePipelineCache(m_logicalDevice, &pipelineCacheCreateInfo, nullptr, &m_pipelineCache)) != VK_SUCCESS)
 		{
-			printf("Failed to create pipeline cache [%u]\n", res);
+			printf("Failed to create pipeline cache [%i]\n", res);
 			return res;
 		}
 	}
@@ -438,7 +438,7 @@ VkResult IBLLib::vkHelper::createCommandBuffer(VkCommandBuffer& _outCmdBuffer, V
 
 	if (res != VK_SUCCESS)
 	{
-		printf("Failed to allocate command buffers [%u]\n", res);
+		printf("Failed to allocate command buffers [%i]\n", res);
 	}
 
 	return res;
@@ -463,7 +463,7 @@ VkResult IBLLib::vkHelper::createCommandBuffers(std::vector<VkCommandBuffer>& _o
 
 	if (res != VK_SUCCESS)
 	{
-		printf("Failed to allocate command buffers [%u]\n", res);
+		printf("Failed to allocate command buffers [%i]\n", res);
 	}
 
 	return res;
@@ -488,7 +488,7 @@ VkResult IBLLib::vkHelper::beginCommandBuffer(VkCommandBuffer _cmdBuffer, VkComm
 
 	if ((res = vkBeginCommandBuffer(_cmdBuffer, &beginInfo)) != VK_SUCCESS)
 	{
-		printf("Failed to start recording command buffers [%u]\n", res);
+		printf("Failed to start recording command buffers [%i]\n", res);
 	}
 	
 	return res;
@@ -507,7 +507,7 @@ VkResult IBLLib::vkHelper::beginCommandBuffers(const std::vector<VkCommandBuffer
 	{
 		if ((res = vkBeginCommandBuffer(buffer, &beginInfo)) != VK_SUCCESS)
 		{
-			printf("Failed to start recording command buffers [%u]\n", res);
+			printf("Failed to start recording command buffers [%i]\n", res);
 			return res;
 		}
 	}
@@ -521,7 +521,7 @@ VkResult IBLLib::vkHelper::endCommandBuffer(VkCommandBuffer _cmdBuffers) const
 
 	if ((res = vkEndCommandBuffer(_cmdBuffers)) != VK_SUCCESS)
 	{
-		printf("Failed to end recording command buffers [%u]\n", res);
+		printf("Failed to end recording command buffers [%i]\n", res);
 	}
 
 	return res;
@@ -535,7 +535,7 @@ VkResult IBLLib::vkHelper::endCommandBuffers(const std::vector<VkCommandBuffer>&
 	{
 		if ((res = vkEndCommandBuffer(buffer)) != VK_SUCCESS)
 		{
-			printf("Failed to end recording command buffers [%u]\n", res);
+			printf("Failed to end recording command buffers [%i]\n", res);
 			return res;
 		}
 	}
@@ -567,7 +567,7 @@ VkResult IBLLib::vkHelper::executeCommandBuffers(const std::vector<VkCommandBuff
 
 		if ((res = vkCreateFence(m_logicalDevice, &fenceInfo, nullptr, &fence)) != VK_SUCCESS)
 		{
-			printf("Failed to end create fence [%u]\n", res);
+			printf("Failed to end create fence [%i]\n", res);
 			return res;
 		}
 	}
@@ -602,12 +602,12 @@ VkResult IBLLib::vkHelper::executeCommandBuffers(const std::vector<VkCommandBuff
 	// wait / block for execution to be complete
 	if ((res = vkWaitForFences(m_logicalDevice, 1u, &fence, VK_TRUE, UINT64_MAX)) != VK_SUCCESS)
 	{
-		printf("Failed to wait for fence [%u]\n", res);
+		printf("Failed to wait for fence [%i]\n", res);
 	}
 
 	if ((res = vkQueueWaitIdle(m_queue)) != VK_SUCCESS)
 	{
-		printf("Failed to wait for queue [%u]\n", res);
+		printf("Failed to wait for queue [%i]\n", res);
 	}
 
 	vkDestroyFence(m_logicalDevice, fence, nullptr);
@@ -634,7 +634,7 @@ VkResult IBLLib::vkHelper::loadShaderModule(VkShaderModule& _outShader, const ui
 	if ((res = vkCreateShaderModule(m_logicalDevice, &createInfo, nullptr, &_outShader)) != VK_SUCCESS)
 	{
 		_outShader = VK_NULL_HANDLE;
-		printf("Failed to create shader module [%u]\n", res);
+		printf("Failed to create shader module [%i]\n", res);
 		return res;
 	}
 
@@ -667,7 +667,7 @@ VkResult IBLLib::vkHelper::createDecriptorSetLayout(VkDescriptorSetLayout& _outL
 	if ((res = vkCreateDescriptorSetLayout(m_logicalDevice, _pCreateInfo, nullptr, &_outLayout)) != VK_SUCCESS)
 	{
 		_outLayout = VK_NULL_HANDLE;
-		printf("Failed to create descriptor set layout [%u]\n", res);
+		printf("Failed to create descriptor set layout [%i]\n", res);
 		return res;
 	}
 
@@ -707,7 +707,7 @@ VkResult IBLLib::vkHelper::createDescriptorSet(VkDescriptorSet& _outDescriptorSe
 
 	if ((res = vkAllocateDescriptorSets(m_logicalDevice, &info, &_outDescriptorSet)) != VK_SUCCESS)
 	{
-		printf("Failed to allocate descriptor set [%u]\n", res);
+		printf("Failed to allocate descriptor set [%i]\n", res);
 	}
 
 	return res;
@@ -733,7 +733,7 @@ VkResult IBLLib::vkHelper::createDescriptorSets(std::vector<VkDescriptorSet>& _o
 
 	if ((res = vkAllocateDescriptorSets(m_logicalDevice, &info, _outDescriptorSets.data())) != VK_SUCCESS)
 	{
-		printf("Failed to allocate descriptor sets [%u]\n", res);
+		printf("Failed to allocate descriptor sets [%i]\n", res);
 	}
 
 	return res;
@@ -770,7 +770,7 @@ VkResult IBLLib::vkHelper::createPipelineLayout(VkPipelineLayout& _outLayout, co
 	if ((res = vkCreatePipelineLayout(m_logicalDevice, &info, nullptr, &_outLayout)) != VK_SUCCESS)
 	{
 		_outLayout = VK_NULL_HANDLE;
-		printf("Failed to create pipeline layout [%u]\n", res);
+		printf("Failed to create pipeline layout [%i]\n", res);
 		return res;
 	}
 
@@ -801,7 +801,7 @@ VkResult IBLLib::vkHelper::createPipelineLayout(VkPipelineLayout& _outLayout, co
 	if ((res = vkCreatePipelineLayout(m_logicalDevice, &info, nullptr, &_outLayout)) != VK_SUCCESS)
 	{
 		_outLayout = VK_NULL_HANDLE;
-		printf("Failed to create pipeline layout [%u]\n", res);
+		printf("Failed to create pipeline layout [%i]\n", res);
 		return res;
 	}
 
@@ -822,7 +822,7 @@ VkResult IBLLib::vkHelper::createPipeline(VkPipeline& _outPipeline, const VkGrap
 	if ((res = vkCreateGraphicsPipelines(m_logicalDevice, m_pipelineCache, 1u, _pCreateInfo, nullptr, &_outPipeline)) != VK_SUCCESS)
 	{
 		_outPipeline = VK_NULL_HANDLE;
-		printf("Failed to create pipeline [%u]\n", res);
+		printf("Failed to create pipeline [%i]\n", res);
 		return res;
 	}
 
@@ -843,7 +843,7 @@ VkResult IBLLib::vkHelper::createRenderPass(VkRenderPass& _outRenderPass, const 
 	if ((res = vkCreateRenderPass(m_logicalDevice, _pCreateInfo, nullptr, &_outRenderPass)) != VK_SUCCESS)
 	{
 		_outRenderPass = VK_NULL_HANDLE;
-		printf("Failed to create renderapass [%u]\n", res);
+		printf("Failed to create renderapass [%i]\n", res);
 		return res;
 	}
 
@@ -894,7 +894,7 @@ VkResult IBLLib::vkHelper::createBufferAndAllocate(VkBuffer& _outBuffer, uint32_
 	if ((res = vkCreateBuffer(m_logicalDevice, &bufferInfo, nullptr, &_outBuffer)) != VK_SUCCESS)
 	{
 		_outBuffer = VK_NULL_HANDLE;
-		printf("Failed to create buffer [%u]\n", res);
+		printf("Failed to create buffer [%i]\n", res);
 		return res;
 	}
 
@@ -914,19 +914,19 @@ VkResult IBLLib::vkHelper::createBufferAndAllocate(VkBuffer& _outBuffer, uint32_
 
 	if (getMemoryTypeIndex(requirements, _memoryFlags, allocInfo.memoryTypeIndex) == false)
 	{
-		printf("Unsupported memory requirements [%u]\n", res);
+		printf("Unsupported memory requirements [%i]\n", res);
 		return res;
 	}
 
 	if ((res = vkAllocateMemory(m_logicalDevice, &allocInfo, nullptr, &buffer.memory)) != VK_SUCCESS)
 	{
-		printf("Failed to allocate buffer [%u]\n", res);
+		printf("Failed to allocate buffer [%i]\n", res);
 		return res;
 	}
 
 	if ((res = vkBindBufferMemory(m_logicalDevice, _outBuffer, buffer.memory, 0u)) != VK_SUCCESS)
 	{
-		printf("Failed to bind buffer memory [%u]\n", res);
+		printf("Failed to bind buffer memory [%i]\n", res);
 	}
 
 	return res;
@@ -964,7 +964,7 @@ VkResult IBLLib::vkHelper::writeBufferData(VkBuffer _buffer, const void* _pData,
 			void* data = nullptr;
 			if ((res = vkMapMemory(m_logicalDevice, buf.memory, 0u, _bytes, 0, &data)) != VK_SUCCESS)
 			{
-				printf("Failed to map buffer memory [%u]\n", res);
+				printf("Failed to map buffer memory [%i]\n", res);
 				return res;
 			}
 
@@ -996,7 +996,7 @@ VkResult IBLLib::vkHelper::readBufferData(VkBuffer _buffer, void* _pData, size_t
 			void* data = nullptr;
 			if ((res = vkMapMemory(m_logicalDevice, buf.memory, _offset, _bytes, 0, &data)) != VK_SUCCESS)
 			{
-				printf("Failed to map buffer memory [%u]\n", res);
+				printf("Failed to map buffer memory [%i]\n", res);
 				return res;
 			}
 
@@ -1044,7 +1044,7 @@ VkResult IBLLib::vkHelper::createImage2DAndAllocate(
 
 	if ((res = vkCreateImage(m_logicalDevice, &imageInfo, nullptr, &_outImage)) != VK_SUCCESS)
 	{
-		printf("Failed to create image [%u]\n", res);
+		printf("Failed to create image [%i]\n", res);
 		return res;
 	}
 
@@ -1064,19 +1064,19 @@ VkResult IBLLib::vkHelper::createImage2DAndAllocate(
 
 	if (getMemoryTypeIndex(requirements, _memoryFlags, allocInfo.memoryTypeIndex) == false)
 	{
-		printf("Unsupported memory requirements [%u]\n", res);
+		printf("Unsupported memory requirements [%i]\n", res);
 		return res;
 	}
 
 	if ((res = vkAllocateMemory(m_logicalDevice, &allocInfo, nullptr, &img.memory)) != VK_SUCCESS)
 	{
-		printf("Failed to allocate image [%u]\n", res);
+		printf("Failed to allocate image [%i]\n", res);
 		return res;
 	}
 
 	if ((res = vkBindImageMemory(m_logicalDevice, _outImage, img.memory, 0u)) != VK_SUCCESS)
 	{
-		printf("Failed to bind image memory [%u]\n", res);
+		printf("Failed to bind image memory [%i]\n", res);
 	}
 
 	return res;
@@ -1163,7 +1163,7 @@ VkResult IBLLib::vkHelper::createImageView(VkImageView& _outView, VkImage _image
 			}
 			else
 			{
-				printf("Failed to create image view [%u]\n", res);
+				printf("Failed to create image view [%i]\n", res);
 			}
 
 			return res;
@@ -1285,7 +1285,7 @@ VkResult IBLLib::vkHelper::createFramebuffer(VkFramebuffer& _outFramebuffer, VkR
 	if ((res = vkCreateFramebuffer(m_logicalDevice, &info, nullptr, &_outFramebuffer)) != VK_SUCCESS)
 	{
 		_outFramebuffer = VK_NULL_HANDLE;
-		printf("Failed to create framebuffer [%u]\n", res);
+		printf("Failed to create framebuffer [%i]\n", res);
 		return res;
 	}
 
@@ -1358,7 +1358,7 @@ VkResult IBLLib::vkHelper::createSampler(VkSampler& _outSampler, VkSamplerCreate
 
 	if ((res = vkCreateSampler(m_logicalDevice, &_info, nullptr, &_outSampler)) != VK_SUCCESS)
 	{
-		printf("Failed to create sampler [%u]\n", res);
+		printf("Failed to create sampler [%i]\n", res);
 	}
 	else
 	{
