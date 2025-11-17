@@ -37,6 +37,10 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 			layers.push_back("VK_LAYER_KHRONOS_validation");
 		}
 
+		std::vector<const char*> extensions;
+		extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+		extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+
 		uint32_t layerCount = 0u;
 		vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
@@ -69,11 +73,17 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 		VkInstanceCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appInfo;
+		createInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 
-		if (_debugOutput)
+		if (!layers.empty())
 		{
 			createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
 			createInfo.ppEnabledLayerNames = layers.data();
+		}
+		if (!extensions.empty()) 
+		{
+			createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+			createInfo.ppEnabledExtensionNames = extensions.data();
 		}
 		// TODO: extensions and layers if needed
 
@@ -169,13 +179,15 @@ VkResult IBLLib::vkHelper::initialize(uint32_t _phyDeviceIndex, uint32_t _descri
 		queueCreateInfo.pQueuePriorities = &queuePriority;
 
 		VkPhysicalDeviceFeatures deviceFeatures{}; // TODO: fill required device features
-
+		std::vector<const char*> device_extensions;
+		device_extensions.push_back("VK_KHR_portability_subset");
 		VkDeviceCreateInfo deviceCreateInfo{};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		deviceCreateInfo.pQueueCreateInfos = &queueCreateInfo;
 		deviceCreateInfo.queueCreateInfoCount = 1u;
 		deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-		deviceCreateInfo.enabledExtensionCount = 0u;
+		deviceCreateInfo.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
+		deviceCreateInfo.ppEnabledExtensionNames = device_extensions.data();
 
 		if ((res = vkCreateDevice(m_physicalDevice, &deviceCreateInfo, nullptr, &m_logicalDevice)) != VK_SUCCESS)
 		{
