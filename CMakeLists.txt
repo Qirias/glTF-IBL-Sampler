@@ -18,7 +18,7 @@ function(cmake_option option description default)
     endif()
 endfunction()
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
@@ -45,6 +45,12 @@ if (${CMAKE_HOST_SYSTEM_NAME} STREQUAL "Linux")
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH FALSE)
 
     set(CMAKE_SKIP_RPATH FALSE)
+elseif(APPLE)
+    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" FORCE)
+    set(CMAKE_SKIP_BUILD_RPATH  FALSE)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE) 
+    set(CMAKE_INSTALL_RPATH "@executable_path")
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 endif()
 
 
@@ -125,6 +131,7 @@ message(STATUS "")
 install(TARGETS cli GltfIblSampler)
 
 #copy ktx.dll to right folder in multi-build configs
+if(WIN32)
 add_custom_command(TARGET GltfIblSampler
   COMMAND ${CMAKE_COMMAND}
         -DMSVC_BUILD_CONFIG_DIR=${CMAKE_CFG_INTDIR}
@@ -132,3 +139,23 @@ add_custom_command(TARGET GltfIblSampler
         -P "${PROJECT_SOURCE_DIR}/cmake/copy_dlls.cmake"
   VERBATIM
 ) 
+elseif(APPLE)
+add_custom_command(TARGET GltfIblSampler
+  COMMAND ${CMAKE_COMMAND} -E copy
+  "${CMAKE_CURRENT_BINARY_DIR}/Ktx/lib/libktx.4.1.0.dylib" 
+  "${CMAKE_CURRENT_BINARY_DIR}/libktx.4.1.0.dylib"
+  POST_BUILD
+)
+add_custom_command(TARGET GltfIblSampler
+  COMMAND ${CMAKE_COMMAND} -E copy
+  "${CMAKE_CURRENT_BINARY_DIR}/Ktx/lib/libktx.4.dylib" 
+  "${CMAKE_CURRENT_BINARY_DIR}/libktx.4.dylib"
+  POST_BUILD
+)
+add_custom_command(TARGET GltfIblSampler
+  COMMAND ${CMAKE_COMMAND} -E copy
+  "${CMAKE_CURRENT_BINARY_DIR}/Ktx/lib/libktx.dylib" 
+  "${CMAKE_CURRENT_BINARY_DIR}/libktx.dylib"
+  POST_BUILD
+)
+endif()
