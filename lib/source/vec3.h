@@ -162,3 +162,12 @@ inline vec3 unit_vector(vec3 v)
     float vlength = sqrt((v.e[0] * v.e[0]) + (v.e[1] * v.e[1]) + (v.e[2] * v.e[2]));
     return vec3(v.e[0] / vlength, v.e[1] / vlength, v.e[2] / vlength);
 }
+
+inline vec3 clamp(const vec3 val, const float minimum, const float maximum)
+{
+    float x = std::max(minimum, std::min(val[0], maximum));
+    float y = std::max(minimum, std::min(val[1], maximum));
+    float z = std::max(minimum, std::min(val[2], maximum));
+
+    return vec3(x, y, z);
+}

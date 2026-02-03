@@ -9,6 +9,8 @@ int SH9::channels = 0;
 float* SH9::data = nullptr;
 std::string SH9::shOutputPath = "sh9.txt";
 
+constexpr float MAX_HDR_VALUE = 10.0f;
+
 void SH9::init(const char* filename, const char* outputPath) {
 	if (outputPath) {
 		shOutputPath = outputPath;
@@ -76,7 +78,7 @@ void SH9::prefilter() {
 			// The cos(phi) term accounts for the changing density of pixels near poles
 			float domega = (2.0f * 3.14159265359f / width) * (3.14159265359f / height) * cos(phi);
 
-			vec3 color = getPixel(j, i);
+			vec3 color = clamp(getPixel(j, i), 0.0, MAX_HDR_VALUE);
 
 			vec3 direction = vec3(x, y, z);
 
