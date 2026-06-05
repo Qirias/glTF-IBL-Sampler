@@ -13,6 +13,7 @@ int main(int argc, char* argv[])
 	unsigned int sampleCount = 1024u;
 	unsigned int mipLevelCount = 0u;
 	unsigned int cubeMapResolution = 0u;
+	unsigned int maxHdrValue = 10u;
 	OutputFormat targetFormat = OutputFormat::B10G11R11_UFLOAT_PACK32;
 	Distribution distribution = Distribution::GGXCubeMap;
 	float lodBias = 0.0f;
@@ -35,6 +36,7 @@ int main(int argc, char* argv[])
 		printf("-distribution NDF to sample (Lambertian, GGX, Charlie, GGXCubeMap)\n");
 		printf("-sampleCount: number of samples used for filtering (default = 1024)\n");
 		printf("-mipLevelCount: number of mip levels of specular cube map. If omitted, an optimal mipmap level is chosen, based on the input panorama's resolution.\n");
+		printf("-maxHdrValue: clamping value for the hdr output\n");
 		printf("-cubeMapResolution: resolution of output cube map.  If omitted, an optimal resolution is chosen, based on the input panorama's resolution.\n");
 		printf("-targetFormat: specify output texture format (R8G8B8A8_UNORM, R16G16B16A16_SFLOAT, R32G32B32A32_SFLOAT, B10G11R11_UFLOAT_PACK32)  \n");
 		printf("-lodBias: level of detail bias applied to filtering (default = 0) \n");
@@ -68,6 +70,9 @@ int main(int argc, char* argv[])
 		else if (strcmp(argv[i], "-mipLevelCount") == 0)
 		{
 			mipLevelCount = strtoul(nextArg, NULL, 0);
+		}
+		else if (strcmp(argv[i], "-maxHdrValue") == 0) {
+			maxHdrValue = strtoul(nextArg, NULL, 0);
 		}
 		else if (strcmp(argv[i], "-cubeMapResolution") == 0)
 		{
@@ -165,7 +170,7 @@ int main(int argc, char* argv[])
 	printf("lodBias set to %f \n", lodBias);
 	printf("debug flag is set to %s\n", enableDebugOutput ? "True" : "False");
 
-	Result res = sample(pathIn, pathOutCubeMap, pathOutLUT, pathOutSH, distribution, cubeMapResolution, mipLevelCount, sampleCount, targetFormat, lodBias, enableDebugOutput);
+	Result res = sample(pathIn, pathOutCubeMap, pathOutLUT, pathOutSH, distribution, cubeMapResolution, mipLevelCount, maxHdrValue, sampleCount, targetFormat, lodBias, enableDebugOutput);
 
 	if (res != Result::Success)
 	{

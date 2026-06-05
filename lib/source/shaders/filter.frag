@@ -95,39 +95,17 @@ vec3 sample_sh(const vec3 direction) {
     float y = direction.y;
     float z = direction.z;
 
-    // Evaluate spherical harmonics basis functions
-    // https://en.wikipedia.org/wiki/Table_of_spherical_harmonics
-    float Y00 = 0.282095; // 1/(2*sqrt(pi))
+    vec4 color = coefficients[0] +
+                 coefficients[1] * y +
+                 coefficients[2] * z +
+                 coefficients[3] * x +
+                 coefficients[4] * x * y +
+                 coefficients[5] * y * z +
+                 coefficients[6] * (3 * z * z - 1) +
+                 coefficients[7] * x * z +
+                 coefficients[8] * (x * x - y * y);
 
-    float Y1_1 = 0.488603 * y; // sqrt(3/(4pi)) * y
-    float Y10  = 0.488603 * z; // sqrt(3/(4pi)) * z
-    float Y11  = 0.488603 * x; // sqrt(3/(4pi)) * x
-
-    float Y2_2 = 1.092548 * x * y; // sqrt(15/(4pi)) * x * y
-    float Y2_1 = 1.092548 * y * z; // sqrt(15/(4pi)) * y * z
-    float Y21  = 1.092548 * x * z; // sqrt(15/(4pi)) * x * z
-    float Y20  = 0.315392 * (3.0 * z * z - 1.0); // sqrt(5/(16pi)) * (3z^2 - 1)
-    float Y22  = 0.546274 * (x * x - y * y); // sqrt(15/(16pi)) * (x^2 - y^2)
-
-    // Combine coefficients with basis functions
-    vec3 color = vec3(0.0, 0.0, 0.0);
-    for (int i = 0; i < 3; i++) {
-        float sum = coefficients[0][i] * Y00;   // L_{00}
-
-        sum += coefficients[1][i] * Y1_1;       // L_{1-1}
-        sum += coefficients[2][i] * Y10;        // L_{10}
-        sum += coefficients[3][i] * Y11;        // L_{11}
-        
-        sum += coefficients[4][i] * Y2_2;       // L_{2-2}
-        sum += coefficients[5][i] * Y2_1;       // L_{2-1}
-        sum += coefficients[6][i] * Y20;        // L_{20}
-        sum += coefficients[7][i] * Y21;        // L_{21}
-        sum += coefficients[8][i] * Y22;        // L_{22}
-
-        color[i] = sum;
-    }
-
-    return color;
+    return color.xyz;
 }
 
 // Hammersley Points on the Hemisphere

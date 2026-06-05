@@ -8,13 +8,13 @@ int SH9::height = 0;
 int SH9::channels = 0;
 float* SH9::data = nullptr;
 std::string SH9::shOutputPath = "sh9.txt";
+unsigned int SH9::maxHdrValue = 10u;
 
-constexpr float MAX_HDR_VALUE = 10.0f;
-
-void SH9::init(const char* filename, const char* outputPath) {
+void SH9::init(const char* filename, const char* outputPath, const unsigned int hdrValue) {
 	if (outputPath) {
 		shOutputPath = outputPath;
 	}
+	maxHdrValue = hdrValue;
 
 	stbi_set_flip_vertically_on_load(true);
 
@@ -28,27 +28,37 @@ void SH9::init(const char* filename, const char* outputPath) {
 }
 
 void SH9::updateCoeffs(const vec3& hdrColor, float domega, float x, float y, float z) {
+	// The coefficients are meant to be evaluated at runtime by simply multiplying with the
+	// direction-based terms (1, y, z, x, x*y, ...). The c * cosA * c folding does three things:
+	//   - project the radiance sample onto the SH basis (radiance SH, the first c)
+	//   - convolve the SH with the clamped cosine kernel (irradiance SH, cosA)
+	//   - project the runtime sample direction onto the SH basis (the second c)
+	// cosA also folds in the Lambert 1/pi (cosA = A_l / pi: 1, 2/3, 1/4) so the runtime does not
+	// need to multiply by 1/pi when applying irradiance (Lambert diffuse BRDF).
+	const float cosA0 = 1.0f;
+	const float cosA1 = 2.0f / 3.0f;
+	const float cosA2 = 1.0f / 4.0f;
 	for (int col = 0; col < 3; col++) {
 		float c;
 
 		c = 0.282095f;
-		coeffs[0][col] += hdrColor[col] * c * domega;
+		coeffs[0][col] += hdrColor[col] * c * cosA0 * c * domega;
 
 		c = 0.488603f;
-		coeffs[1][col] += hdrColor[col] * (c * y) * domega;
-		coeffs[2][col] += hdrColor[col] * (c * z) * domega;
-		coeffs[3][col] += hdrColor[col] * (c * x) * domega;
+		coeffs[1][col] += hdrColor[col] * (c * cosA1 * c * y) * domega;
+		coeffs[2][col] += hdrColor[col] * (c * cosA1 * c * z) * domega;
+		coeffs[3][col] += hdrColor[col] * (c * cosA1 * c * x) * domega;
 
 		c = 1.092548f;
-		coeffs[4][col] += hdrColor[col] * (c * x * y) * domega;
-		coeffs[5][col] += hdrColor[col] * (c * y * z) * domega;
-		coeffs[7][col] += hdrColor[col] * (c * x * z) * domega;
+		coeffs[4][col] += hdrColor[col] * (c * cosA2 * c * x * y) * domega;
+		coeffs[5][col] += hdrColor[col] * (c * cosA2 * c * y * z) * domega;
+		coeffs[7][col] += hdrColor[col] * (c * cosA2 * c * x * z) * domega;
 
-		c = 0.375392f;
-		coeffs[6][col] += hdrColor[col] * (c * (3 * z * z - 1)) * domega;
+		c = 0.315392f;
+		coeffs[6][col] += hdrColor[col] * (c * cosA2 * c * (3 * z * z - 1)) * domega;
 
 		c = 0.546274f;
-		coeffs[8][col] += hdrColor[col] * (c * (x * x - y * y)) * domega;
+		coeffs[8][col] += hdrColor[col] * (c * cosA2 * c * (x * x - y * y)) * domega;
 	}
 }
 
@@ -78,7 +88,7 @@ void SH9::prefilter() {
 			// The cos(phi) term accounts for the changing density of pixels near poles
 			float domega = (2.0f * 3.14159265359f / width) * (3.14159265359f / height) * cos(phi);
 
-			vec3 color = clamp(getPixel(j, i), 0.0, MAX_HDR_VALUE);
+			vec3 color = clamp(getPixel(j, i), 0.0, static_cast<float>(maxHdrValue));
 
 			vec3 direction = vec3(x, y, z);
 
