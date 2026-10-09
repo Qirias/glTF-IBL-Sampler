@@ -975,10 +975,6 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 			break;
 	}
 
-	vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
-
-	vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline);
-
 	// Filter every mip level: from inputCubeMap->currentMipLevel
 	// The mip levels are filtered from the smallest mipmap to the largest mipmap,
 	// i.e. the last mipmap is filtered last.
@@ -1015,11 +1011,22 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		values.lodBias = _lodBias;
 		values.distribution = _distribution;
 
+		vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
+		vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline);
 		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
 
 		vulkan.beginRenderPass(cubeMapCmd, renderPass, filterOutputFramebuffer, VkRect2D{ 0u, 0u, currentFramebufferSideLength, currentFramebufferSideLength }, clearValues);
 		vkCmdDraw(cubeMapCmd, 3, 1u, 0, 0);
 		vulkan.endRenderPass(cubeMapCmd);
+
+		// Submit every mip level on its own: recorded together, filtering a large cube map is one GPU job
+		// long enough for the OS watchdog (TDR) to reset a slower GPU, losing the device. The submit waits
+		// for the GPU, so the command buffer can be begun again right away, for the next level or the output.
+		if (vulkan.endCommandBuffer(cubeMapCmd) != VK_SUCCESS || vulkan.executeCommandBuffer(cubeMapCmd) != VK_SUCCESS ||
+			vulkan.beginCommandBuffer(cubeMapCmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) != VK_SUCCESS)
+		{
+			return Result::VulkanError;
+		}
 	}
 
 	////////////////////////////////////////////////////////////////////////////////////////
