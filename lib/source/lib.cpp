@@ -832,12 +832,14 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		RenderPassDesc renderPassDesc;
 
 		// add rendertargets (cubemap faces)
-		for (int face = 0; face < 6; ++face)
+		// A mip level is drawn in bands, each its own render pass, so a pass must keep what the earlier bands
+		// wrote: the targets start in the attachment layout, into which they are moved once, by barriers.
+		// The 6 faces, then the LUT.
+		const VkImageLayout attachmentLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		for (int target = 0; target < 7; ++target)
 		{
-			renderPassDesc.addAttachment(cubeMapFormat);
+			renderPassDesc.addAttachment(target < 6 ? cubeMapFormat : LUTFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE, VK_SAMPLE_COUNT_1_BIT, attachmentLayout, attachmentLayout);
 		}
-
-		renderPassDesc.addAttachment(LUTFormat);		
 
 		if (vulkan.createRenderPass(renderPass, renderPassDesc.getInfo()) != VK_SUCCESS)
 		{
@@ -918,6 +920,8 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		filterCubeMapPipelineDesc.addColorBlendAttachment(colorBlendAttachment, 1u);
 
 		filterCubeMapPipelineDesc.setViewportExtent(VkExtent2D{ cubeMapSideLength, cubeMapSideLength });
+		// set per band
+		filterCubeMapPipelineDesc.addDynamicState(VK_DYNAMIC_STATE_SCISSOR);
 
 		if (vulkan.createPipeline(filterPipeline, filterCubeMapPipelineDesc.getInfo()) != VK_SUCCESS)
 		{
@@ -976,11 +980,19 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 	}
 
 	// Filter every mip level: from inputCubeMap->currentMipLevel
-	// The mip levels are filtered from the smallest mipmap to the largest mipmap,
-	// i.e. the last mipmap is filtered last.
-	// This has the desirable side effect that the framebuffer size of the last filter pass
-	// matches with the LUT size, allowing the LUT to only be written in the last pass
-	// without worrying to preserve the LUT's image contents between the previous render passes.
+	// The mip levels are filtered from the smallest mipmap to the largest mipmap, so mip 0, the only level
+	// that writes the LUT and the only one as large as it, comes last and overwrites whatever the earlier
+	// levels left there.
+	vulkan.imageBarrier(cubeMapCmd, outputLUT,
+											VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+											VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 0u,
+											VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT);
+
+	// Each band of a level is submitted on its own: recorded together, filtering a large cube map is one GPU
+	// job long enough for the OS watchdog (TDR) to reset a slower GPU, losing the device. A band is sized to
+	// about this many samples, a tenth of a second on an integrated GPU.
+	constexpr uint64_t samplesPerSubmit = 1ull << 30;
+
 	for (uint32_t currentMipLevel = outputMipLevels - 1; currentMipLevel != -1; currentMipLevel--)
 	{
 		unsigned int currentFramebufferSideLength = cubeMapSideLength >> currentMipLevel;
@@ -1012,21 +1024,38 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 		values.lodBias = _lodBias;
 		values.distribution = _distribution;
 
-		vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
-		vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline);
-		vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
+		// Every texel filters the 6 faces, a single read each for GGX at roughness 0 (see filterColor), and on
+		// mip 0 integrates the LUT as well.
+		const uint64_t samples = std::max(_sampleCount, 1u);
+		const bool mirrorFaces = (_distribution == Distribution::GGX || _distribution == Distribution::GGXCubeMap) && values.roughness == 0.0f;
+		const uint64_t samplesPerRow = uint64_t(currentFramebufferSideLength) * ((mirrorFaces ? 6u : 6u * samples) + (currentMipLevel == 0 ? samples : 0u));
+		const uint32_t bandHeight = static_cast<uint32_t>(std::max<uint64_t>(std::min<uint64_t>(samplesPerSubmit / samplesPerRow, currentFramebufferSideLength), 1u));
 
-		vulkan.beginRenderPass(cubeMapCmd, renderPass, filterOutputFramebuffer, VkRect2D{ 0u, 0u, currentFramebufferSideLength, currentFramebufferSideLength }, clearValues);
-		vkCmdDraw(cubeMapCmd, 3, 1u, 0, 0);
-		vulkan.endRenderPass(cubeMapCmd);
-
-		// Submit every mip level on its own: recorded together, filtering a large cube map is one GPU job
-		// long enough for the OS watchdog (TDR) to reset a slower GPU, losing the device. The submit waits
-		// for the GPU, so the command buffer can be begun again right away, for the next level or the output.
-		if (vulkan.endCommandBuffer(cubeMapCmd) != VK_SUCCESS || vulkan.executeCommandBuffer(cubeMapCmd) != VK_SUCCESS ||
-			vulkan.beginCommandBuffer(cubeMapCmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) != VK_SUCCESS)
+		for (uint32_t bandStart = 0; bandStart < currentFramebufferSideLength; bandStart += bandHeight)
 		{
-			return Result::VulkanError;
+			const VkRect2D band{ { 0, static_cast<int32_t>(bandStart) }, { currentFramebufferSideLength, std::min(bandHeight, currentFramebufferSideLength - bandStart) } };
+
+			vulkan.bindDescriptorSet(cubeMapCmd, filterPipelineLayout, filterDescriptorSet);
+			vkCmdBindPipeline(cubeMapCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, filterPipeline);
+			vkCmdPushConstants(cubeMapCmd, filterPipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &values);
+			vkCmdSetScissor(cubeMapCmd, 0, 1, &band);
+
+			// Waiting for the previous submit orders it only on the host: make its writes, the LUT that every
+			// level writes in particular, visible to this band's.
+			VkMemoryBarrier previousBands{ VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT };
+			vkCmdPipelineBarrier(cubeMapCmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 1, &previousBands, 0, nullptr, 0, nullptr);
+
+			vulkan.beginRenderPass(cubeMapCmd, renderPass, filterOutputFramebuffer, band, clearValues);
+			vkCmdDraw(cubeMapCmd, 3, 1u, 0, 0);
+			vulkan.endRenderPass(cubeMapCmd);
+
+			// The submit waits for the GPU, so the command buffer can be begun again right away, for the next
+			// band or the output.
+			if (vulkan.endCommandBuffer(cubeMapCmd) != VK_SUCCESS || vulkan.executeCommandBuffer(cubeMapCmd) != VK_SUCCESS ||
+				vulkan.beginCommandBuffer(cubeMapCmd, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT) != VK_SUCCESS)
+			{
+				return Result::VulkanError;
+			}
 		}
 	}
 
