@@ -1004,7 +1004,8 @@ IBLLib::Result IBLLib::sample(const char* _inputPath, const char* _outputPathCub
 												subresourceRange);
 
 		PushConstant values{};
-		values.roughness = static_cast<float>(currentMipLevel) / static_cast<float>(outputMipLevels - 1);
+		// A single level is the base level, roughness 0; dividing by outputMipLevels - 1 would make it NaN.
+		values.roughness = outputMipLevels > 1u ? static_cast<float>(currentMipLevel) / static_cast<float>(outputMipLevels - 1) : 0.0f;
 		values.sampleCount = _sampleCount;
 		values.mipLevel = currentMipLevel;
 		values.width = cubeMapSideLength;
