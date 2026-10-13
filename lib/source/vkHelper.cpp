@@ -1510,9 +1510,9 @@ IBLLib::GraphicsPipelineDesc::GraphicsPipelineDesc()
 	m_dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
 	m_dynamicState.pNext = nullptr;
 
-	// enable all dynamic states, dont bake these into pipeline
-	static const VkDynamicState dynamicStates[] =
-	{ 
+	// dynamic by default; viewport and scissor are baked in by setViewportExtent unless added with addDynamicState
+	m_dynamicStates =
+	{
 	//	VK_DYNAMIC_STATE_VIEWPORT,
 	//	VK_DYNAMIC_STATE_SCISSOR,
 		VK_DYNAMIC_STATE_LINE_WIDTH,
@@ -1523,9 +1523,6 @@ IBLLib::GraphicsPipelineDesc::GraphicsPipelineDesc()
 		VK_DYNAMIC_STATE_STENCIL_WRITE_MASK,
 		VK_DYNAMIC_STATE_STENCIL_REFERENCE
 	};
-
-	m_dynamicState.dynamicStateCount = static_cast<uint32_t>(sizeof(dynamicStates) / sizeof(VkDynamicState));
-	m_dynamicState.pDynamicStates = dynamicStates;
 
 	// rasterizer defaults
 	// TODO: add setters for rasterizer configuration
@@ -1633,6 +1630,11 @@ void  IBLLib::GraphicsPipelineDesc::setPipelineLayout(VkPipelineLayout _pipeline
 	m_info.layout = _pipelineLayout;
 }
 
+void IBLLib::GraphicsPipelineDesc::addDynamicState(VkDynamicState _state)
+{
+	m_dynamicStates.push_back(_state);
+}
+
 void IBLLib::GraphicsPipelineDesc::setViewportExtent(VkExtent2D _extent)
 {
 	m_viewport.x = 0.0f;
@@ -1674,6 +1676,8 @@ const VkGraphicsPipelineCreateInfo* IBLLib::GraphicsPipelineDesc::getInfo()
 	m_info.pRasterizationState = &m_rasterState;
 	m_info.pMultisampleState = &m_multiSample;
 	m_info.pColorBlendState = &m_colorBlendState;
+	m_dynamicState.dynamicStateCount = static_cast<uint32_t>(m_dynamicStates.size());
+	m_dynamicState.pDynamicStates = m_dynamicStates.data();
 	m_info.pDynamicState = &m_dynamicState;
 	m_info.pViewportState = &m_viewportState;
 	m_info.pDepthStencilState = &m_depthStencilState;

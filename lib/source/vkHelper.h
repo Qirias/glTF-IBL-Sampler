@@ -273,6 +273,7 @@ namespace IBLLib
 		void setRenderPass(VkRenderPass _renderPass);
 		void setPipelineLayout(VkPipelineLayout _pipelineLayout);
 		void setViewportExtent(VkExtent2D _extent);
+		void addDynamicState(VkDynamicState _state);
 
 		const VkGraphicsPipelineCreateInfo* getInfo();
 	private:
@@ -296,6 +297,7 @@ namespace IBLLib
 		VkPipelineDepthStencilStateCreateInfo m_depthStencilState{};
 		VkPipelineColorBlendStateCreateInfo  m_colorBlendState{};
 		VkPipelineDynamicStateCreateInfo m_dynamicState{};
+		std::vector<VkDynamicState> m_dynamicStates;
 	};
 
 	class RenderPassDesc

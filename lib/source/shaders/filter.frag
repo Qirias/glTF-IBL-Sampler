@@ -314,6 +314,13 @@ float computeLod(float pdf)
 vec3 filterColor(vec3 N)
 {
     //return  textureLod(uCubeMap, N, 3.0).rgb;
+    if ((pFilterParameters.distribution == cGGX || pFilterParameters.distribution == cGGXCubeMap) && pFilterParameters.roughness == 0.0)
+    {
+        // Every GGX sample at zero roughness has N as its half vector, so the loop below would
+        // read the same texel sampleCount times: the mirror direction is the whole result.
+        return textureLod(uCubeMap, N, pFilterParameters.lodBias).rgb;
+    }
+
     vec3 color = vec3(0.f);
     float weight = 0.0f;
 
@@ -351,7 +358,7 @@ vec3 filterColor(vec3 N)
             {
                 if(pFilterParameters.roughness == 0.0)
                 {
-                    // without this the roughness=0 lod is too high
+                    // without this the roughness=0 lod is too high (only Charlie gets here: GGX returns early)
                     lod = pFilterParameters.lodBias;
                 }
 
